@@ -1,3 +1,4 @@
+import math
 from typing import List, Tuple
 from PIL import Image
 import numpy as np
@@ -37,6 +38,116 @@ def turn_negative(image: Image) -> Image:
             image.putpixel(
                 (r, c), (pixels[0][r][c], pixels[1][r][c], pixels[2][r][c]))
     return image
+
+
+def rgb_to_hsb(image: Image) -> List[List[List[float]]]:
+    h_pixels = [[_ for _ in range(image.size[1] - 1)]
+                for _ in range(image.size[0] - 1)]
+    s_pixels = [[_ for _ in range(image.size[1] - 1)]
+                for _ in range(image.size[0] - 1)]
+    b_pixels = [[_ for _ in range(image.size[1] - 1)]
+                for _ in range(image.size[0] - 1)]
+    for r in range(image.size[0] - 1):
+        for c in range(image.size[1] - 1):
+            colors = image.getpixel((r, c))
+
+            # normalize red, green and blue values
+            red = colors[0] / 255.0
+            green = colors[1] / 255.0
+            blue = colors[2] / 255.0
+
+            # conversion start
+            maximum = max(red, max(green, blue))
+            minimum = min(red, min(green, blue))
+
+            # if max == min, h is undefined = 0
+            h = 0.0
+            if maximum == red and green >= blue:
+                h = 60 * (green - blue) / (maximum - minimum)
+            elif maximum == red and green < blue:
+                h = 60 * (green - blue) / (maximum - minimum) + 360
+            elif maximum == green:
+                h = 60 * (blue - red) / (maximum - minimum) + 120
+            elif maximum == blue:
+                h = 60 * (red - green) / (maximum - minimum) + 240
+            h_pixels[r][c] = h
+            s = 0.0 if (maximum == 0) else (1.0 - (minimum / maximum))
+            s_pixels[r][c] = s
+            b_pixels[r][c] = maximum
+    return [h_pixels, s_pixels, b_pixels]
+
+
+def get_rgb_pixels_from_hsb(pixels: List[List[List[float]]]) -> ndarray:
+    new_pixels = np.empty(
+        [len(pixels[0]), len(pixels[0][0]), 3], dtype=np.uint8)
+    for i in range(len(pixels[0])):
+        for c in range(len(pixels[0][0])):
+            if pixels[1][i][c] == 0:
+                red = green = blue = pixels[2][i][c]
+            else:
+                sector_pos = pixels[0][i][c] / 60.0
+                sector_number = int(math.floor(sector_pos))
+                fractional_sector = sector_pos - sector_number
+
+                p = pixels[2][i][c] * (1.0 - pixels[1][i][c])
+                q = pixels[2][i][c] * (1.0 - (pixels[1][i][c] * fractional_sector))
+                t = pixels[2][i][c] * (1.0 - (pixels[1][i][c] * (1 - fractional_sector)))
+
+                if sector_number == 0:
+                    red = pixels[2][i][c]
+                    green = t
+                    blue = p
+                elif sector_number == 1:
+                    red = q
+                    green = pixels[2][i][c]
+                    blue = p
+                elif sector_number == 2:
+                    red = p
+                    green = pixels[2][i][c]
+                    blue = t
+                elif sector_number == 3:
+                    red = p
+                    green = q
+                    blue = pixels[2][i][c]
+                elif sector_number == 4:
+                    red = t
+                    green = p
+                    blue = pixels[2][i][c]
+                elif sector_number == 5:
+                    red = pixels[2][i][c]
+                    green = p
+                    blue = q
+
+                red = round(red * 255.0)
+                green = round(green * 255.0)
+                blue = round(blue * 255.0)
+
+                red = red if red > 0 else 0
+                green = green if green > 0 else 0
+                blue = blue if blue > 0 else 0
+
+                red = red if red < 256 else 255
+                green = green if green < 256 else 255
+                blue = blue if blue < 256 else 255
+
+                new_pixels[i][c] = np.array([red, green, blue], dtype=np.uint8)
+
+    return new_pixels
+
+
+def hsb_to_rgb(pixels: List[List[List[float]]]) -> Image:
+    """
+    Transforms an image (in this case, it is a list of values that characterize a pixel) in YIQ into RGB calling an
+    auxiliary function to make the calculations. It rotates the pixels as well to adjust the image correctly after the
+    conversion.
+    :param pixels: YIQ pixels list
+    :return: RGB image from the YIQ pixels
+    """
+    pixels = get_rgb_pixels_from_hsb(pixels)
+    rotated_pixels = np.rot90(pixels, axes=(1, 0))
+    rotated_pixels = np.flip(rotated_pixels, axis=1)
+    new_image = Image.fromarray(rotated_pixels)
+    return new_image
 
 
 def rgb_to_yiq(image: Image) -> List[List[List[float]]]:

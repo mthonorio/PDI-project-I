@@ -8,10 +8,10 @@ original_img = Image.open(test_image)
 original_img.show(title="Original Image")
 
 # Show the image converted to rgb to yiq after to rgb
-rgb_yiq_rgb = Image.open(test_image)
-rgb_yiq_rgb = rgb_to_yiq(rgb_yiq_rgb)
-rgb_yiq_rgb = yiq_to_rgb(rgb_yiq_rgb)
-rgb_yiq_rgb.show(title="RGB to YIQ to RGB")
+rgb_hsb_rgb = Image.open(test_image)
+rgb_hsb_rgb = rgb_to_hsb(rgb_hsb_rgb)
+rgb_hsb_rgb = hsb_to_rgb(rgb_hsb_rgb)
+rgb_hsb_rgb.show(title="RGB to HSB to RGB")
 
 # Show the image converted to negative
 negative_img = Image.open(test_image)
