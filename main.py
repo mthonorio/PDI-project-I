@@ -1,15 +1,17 @@
 from modules import *
+import os
 
 directory = "tests/"
-test_image = directory+"image.png"
+test_image = directory+"Shapes.png"
 
 # Show the original image
 original_img = Image.open(test_image)
 original_img.show(title="Original Image")
 
-# Show the image converted to rgb to yiq after to rgb
+# Show the image converted to rgb to hsb after to rgb
 rgb_hsb_rgb = Image.open(test_image)
 rgb_hsb_rgb = rgb_to_hsb(rgb_hsb_rgb)
+print("Vector ", rgb_hsb_rgb)
 rgb_hsb_rgb = hsb_to_rgb(rgb_hsb_rgb)
 rgb_hsb_rgb.show(title="RGB to HSB to RGB")
 
@@ -34,7 +36,7 @@ median_3x3_extension.show(title="Median 3x3 with extension")
 # Show the image correlation with a 7x7 filter
 median_7x7_extension = Image.open(test_image)
 begin_time = timeit.default_timer()
-median_7x7_extension = median_ixj(7, 7, median_7x7_extension)
+median_7x7_extension = median_ixj(15, 15, median_7x7_extension)
 end_time = timeit.default_timer()
 print("Median 7x7 with extension: ", end_time - begin_time)
 median_7x7_extension.show(title="Median 7x7 with extension")

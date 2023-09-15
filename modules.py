@@ -3,7 +3,6 @@ from typing import List, Tuple
 from PIL import Image
 import numpy as np
 from numpy import ndarray
-import os
 import timeit
 
 
@@ -61,8 +60,9 @@ def rgb_to_hsb(image: Image) -> List[List[List[float]]]:
             minimum = min(red, min(green, blue))
 
             # if max == min, h is undefined = 0
-            h = 0.0
-            if maximum == red and green >= blue:
+            if maximum == minimum:
+                h = 0.0  # undefined
+            elif maximum == red and green >= blue:
                 h = 60 * (green - blue) / (maximum - minimum)
             elif maximum == red and green < blue:
                 h = 60 * (green - blue) / (maximum - minimum) + 360
@@ -118,19 +118,19 @@ def get_rgb_pixels_from_hsb(pixels: List[List[List[float]]]) -> ndarray:
                     green = p
                     blue = q
 
-                red = round(red * 255.0)
-                green = round(green * 255.0)
-                blue = round(blue * 255.0)
+            red = round(red * 255.0)
+            green = round(green * 255.0)
+            blue = round(blue * 255.0)
 
-                red = red if red > 0 else 0
-                green = green if green > 0 else 0
-                blue = blue if blue > 0 else 0
+            red = red if red > 0 else 0
+            green = green if green > 0 else 0
+            blue = blue if blue > 0 else 0
 
-                red = red if red < 256 else 255
-                green = green if green < 256 else 255
-                blue = blue if blue < 256 else 255
+            red = red if red < 256 else 255
+            green = green if green < 256 else 255
+            blue = blue if blue < 256 else 255
 
-                new_pixels[i][c] = np.array([red, green, blue], dtype=np.uint8)
+            new_pixels[i][c] = np.array([red, green, blue], dtype=np.uint8)
 
     return new_pixels
 
