@@ -1,8 +1,9 @@
 from modules import *
+from PIL import Image
 import os
 
 directory = "tests/"
-test_image = directory+"Shapes.png"
+test_image = directory+"testpat.1k.color2.tif"
 
 # Show the original image
 original_img = Image.open(test_image)
@@ -15,8 +16,12 @@ print("Vector ", rgb_hsb_rgb)
 rgb_hsb_rgb = hsb_to_rgb(rgb_hsb_rgb)
 rgb_hsb_rgb.show(title="RGB to HSB to RGB")
 
+
+negative_b = turn_negative_b(rgb_hsb_rgb)
+negative_b.show(title="Negative in B")
+
 # Show the image converted to negative
-negative_img = Image.open(test_image)
+"""negative_img = Image.open(test_image)
 negative_img = turn_negative(negative_img)
 negative_img.show(title="Negative RGB")
 
@@ -40,8 +45,8 @@ median_7x7_extension = median_ixj(15, 15, median_7x7_extension)
 end_time = timeit.default_timer()
 print("Median 7x7 with extension: ", end_time - begin_time)
 median_7x7_extension.show(title="Median 7x7 with extension")
-
-# List all files in the directory
+"""
+"""# List all files in the directory
 files = os.listdir(directory)
 
 # Loop to verify if the file is a .txt
@@ -50,3 +55,4 @@ for file in files:
     if file.endswith(".txt"):
         # Execute the function to all files .txt
         read_correlational_filters(directory + file)
+"""

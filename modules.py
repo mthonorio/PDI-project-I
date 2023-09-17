@@ -150,6 +150,21 @@ def hsb_to_rgb(pixels: List[List[List[float]]]) -> Image:
     return new_image
 
 
+def turn_negative_b(image: Image) -> Image:
+    """
+    Transforms an image (in this case, it is a list of values that characterize a pixel) in RGB into HSB calling and
+    turning the B channel negative.
+    :param pixels: RGB pixels list
+    :return: RGB image from the HSB pixels
+
+    """
+    hsb_pixels = rgb_to_hsb(image)
+    for r in range(len(hsb_pixels[0])):
+        for c in range(len(hsb_pixels[0][0])):
+            hsb_pixels[2][r][c] = 1 - hsb_pixels[2][r][c]
+    return hsb_to_rgb(hsb_pixels)
+
+
 def rgb_to_yiq(image: Image) -> List[List[List[float]]]:
     """
     Receives an RGB image and makes the necessary adjusts to convert each pixel to its YIQ counter-part utilizing the
