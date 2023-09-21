@@ -1,6 +1,6 @@
 from modules import *
-from PIL import Image
-import os
+
+# import os
 
 directory = "tests/"
 test_image = directory+"testpat.1k.color2.tif"
@@ -11,12 +11,17 @@ original_img.show(title="Original Image")
 
 # Show the image converted to rgb to hsb after to rgb
 rgb_hsb_rgb = Image.open(test_image)
-rgb_hsb_rgb = rgb_to_hsb(rgb_hsb_rgb)
+"""rgb_hsb_rgb = rgb_to_hsb(rgb_hsb_rgb)
 print("Vector ", rgb_hsb_rgb)
 rgb_hsb_rgb = hsb_to_rgb(rgb_hsb_rgb)
 rgb_hsb_rgb.show(title="RGB to HSB to RGB")
+"""
 
+# Show image modified in HUE
+image_hue_modified = change_hue_sat(rgb_hsb_rgb, 60)
+image_hue_modified.show(title="Modified Hue")
 
+# Show the image converted to negative in B
 negative_b = turn_negative_b(rgb_hsb_rgb)
 negative_b.show(title="Negative in B")
 

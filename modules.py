@@ -150,11 +150,21 @@ def hsb_to_rgb(pixels: List[List[List[float]]]) -> Image:
     return new_image
 
 
+def change_hue_sat(image: Image, add_to_hue=0, add_to_sat=0) -> Image:
+    hsb_pixels = rgb_to_hsb(image)
+
+    for r in range(len(hsb_pixels[0])):
+        for c in range(len(hsb_pixels[0][0])):
+            hsb_pixels[0][r][c] = add_to_hue + hsb_pixels[0][r][c]
+            hsb_pixels[1][r][c] = add_to_sat + hsb_pixels[1][r][c]
+    return hsb_to_rgb(hsb_pixels)
+
+
 def turn_negative_b(image: Image) -> Image:
     """
     Transforms an image (in this case, it is a list of values that characterize a pixel) in RGB into HSB calling and
     turning the B channel negative.
-    :param pixels: RGB pixels list
+    :param image: RGB image that is going to be converted to HSB
     :return: RGB image from the HSB pixels
 
     """
@@ -163,94 +173,6 @@ def turn_negative_b(image: Image) -> Image:
         for c in range(len(hsb_pixels[0][0])):
             hsb_pixels[2][r][c] = 1 - hsb_pixels[2][r][c]
     return hsb_to_rgb(hsb_pixels)
-
-
-def rgb_to_yiq(image: Image) -> List[List[List[float]]]:
-    """
-    Receives an RGB image and makes the necessary adjusts to convert each pixel to its YIQ counter-part utilizing the
-    correct formula for it.
-    :param image: Original image in RGB
-    :return: List containing every component of every pixel in YIQ format
-    """
-    y_pixels = [[_ for _ in range(image.size[1] - 1)]
-                for _ in range(image.size[0] - 1)]
-    i_pixels = [[_ for _ in range(image.size[1] - 1)]
-                for _ in range(image.size[0] - 1)]
-    q_pixels = [[_ for _ in range(image.size[1] - 1)]
-                for _ in range(image.size[0] - 1)]
-    for r in range(image.size[0] - 1):
-        for c in range(image.size[1] - 1):
-            colors = image.getpixel((r, c))
-            y = 0.299 * colors[0] + 0.587 * colors[1] + 0.114 * colors[2]
-            i = 0.596 * colors[0] - 0.274 * colors[1] - 0.322 * colors[2]
-            q = 0.211 * colors[0] - 0.523 * colors[1] + 0.312 * colors[2]
-            y_pixels[r][c] = y
-            i_pixels[r][c] = i
-            q_pixels[r][c] = q
-    return [y_pixels, i_pixels, q_pixels]
-
-
-def get_rgb_pixels_from_yiq(pixels: List[List[List[float]]]) -> ndarray:
-    """
-    Similar to the RGB-YIQ function, but this time it does the opposite. It receives a list containing every pixel in
-    YIQ format, and returns them in RGB format after conversion.
-    :param pixels: List containing the pixels in YIQ format
-    :return: np array containing every pixel in RGB format
-    """
-    new_pixels = np.empty(
-        [len(pixels[0]), len(pixels[0][0]), 3], dtype=np.uint8)
-    for i in range(len(pixels[0])):
-        for c in range(len(pixels[0][0])):
-            r = pixels[0][i][c] + 0.956 * \
-                pixels[1][i][c] + 0.621 * pixels[2][i][c]
-            g = pixels[0][i][c] - 0.272 * \
-                pixels[1][i][c] - 0.647 * pixels[2][i][c]
-            b = pixels[0][i][c] - 1.106 * \
-                pixels[1][i][c] + 1.703 * pixels[2][i][c]
-
-            r = round(r)
-            g = round(g)
-            b = round(b)
-
-            r = r if r > 0 else 0
-            g = g if g > 0 else 0
-            b = b if b > 0 else 0
-
-            r = r if r < 256 else 255
-            g = g if g < 256 else 255
-            b = b if b < 256 else 255
-
-            new_pixels[i][c] = np.array([r, g, b], dtype=np.uint8)
-
-    return new_pixels
-
-
-def yiq_to_rgb(pixels: List[List[List[float]]]) -> Image:
-    """
-    Transforms an image (in this case, it is a list of values that characterize a pixel) in YIQ into RGB calling an
-    auxiliary function to make the calculations. It rotates the pixels as well to adjust the image correctly after the
-    conversion.
-    :param pixels: YIQ pixels list
-    :return: RGB image from the YIQ pixels
-    """
-    pixels = get_rgb_pixels_from_yiq(pixels)
-    rotated_pixels = np.rot90(pixels, axes=(1, 0))
-    rotated_pixels = np.flip(rotated_pixels, axis=1)
-    new_image = Image.fromarray(rotated_pixels)
-    return new_image
-
-
-def negative_on_y(image: Image) -> Image:
-    """
-    Turns the Y from the YIQ color scheme into negative and returns an image of the result.
-    :param image: Original image in RGB format
-    :return: RGB image with the Y coordinate of YIQ negative.
-    """
-    yiq_pixels = rgb_to_yiq(image)
-    for i in range(len(yiq_pixels[0])):
-        for r in range(len(yiq_pixels[0][0])):
-            yiq_pixels[0][i][r] = 255 - yiq_pixels[0][i][r]
-    return yiq_to_rgb(yiq_pixels)
 
 
 def median_ixj(i: int, j: int, image: Image) -> Image:
