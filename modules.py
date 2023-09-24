@@ -1,4 +1,5 @@
 import math
+from copy import deepcopy
 from typing import List, Tuple
 from PIL import Image
 import numpy as np
@@ -231,9 +232,10 @@ def median_filter(image: Image, size: Tuple[int, int]) -> Image:
     return Image.fromarray(result)
 
 
-def call_correlation_mxn(image: Image, correlational_filter: ndarray, offset: Tuple[int, int]) -> Image:
+def call_correlation_mxn(image: Image, correlational_filter: ndarray, offset: Tuple[int, int], stride) -> Image:
     """
     This function checks if the size of the filter is valid and then calls the correlational filter
+    :param stride: Regarding the step that the filter is going to take
     :param image: image witch the filter will be applied
     :param correlational_filter: array containing the filter and its values
     :param offset: offset to be considered by the function
@@ -245,12 +247,13 @@ def call_correlation_mxn(image: Image, correlational_filter: ndarray, offset: Tu
     m, n = size
     if m < 0 or n < 0 or type(m) != int or type(n) != int:
         raise ValueError("m and n must be a positive integer!")
-    return correlational(image, size, correlational_filter, offset)
+    return correlational(image, size, correlational_filter, offset, stride)
 
 
-def correlational(image: Image, size: Tuple[int, int], correlational_filter: ndarray, offset: Tuple[int, int]) -> Image:
+def correlational(image: Image, size: Tuple[int, int], correlational_filter: ndarray, offset: Tuple[int, int], stride) -> Image:
     """
     This function will apply a correlational filter
+    :param stride: Regarding the step that the filter is going to take
     :param image: image witch the filter will be applied
     :param size: size of the window of the filter (mxn)
     :param correlational_filter: array containing the filter and its values
@@ -261,28 +264,29 @@ def correlational(image: Image, size: Tuple[int, int], correlational_filter: nda
     m, n = size
     window = correlational_filter
 
-    # how many rows and columns will be expanded by 0
-    mxn_extended = (m // 2, n // 2)
+    output_height = (im.shape[0] - m) // stride + 1
+    output_width = (im.shape[1] - n) // stride + 1
 
-    # final image will be the 'result'
-    result = np.zeros_like(im)
-
+    # final image will be the 'result', initializes output with array of zeros
+    result = deepcopy(im)
+    output = np.zeros((output_height, output_width))
     for i in range(im.shape[2]):
         # getting all the values of R, then G, then B
         channel = im[:, :, i]
-        # expanding the array with 0s according to the needs of the filter
-        padded_channel = np.pad(channel, mxn_extended, mode='constant')
-        for x in range(im.shape[0]):
-            for y in range(im.shape[1]):
+
+        for x in range(0, im.shape[0] - m + 1, stride):
+            for y in range(0, im.shape[1] - n + 1, stride):
                 # getting a sub_image that starts at position x and finishes at position x+m
                 # and starts at position y and finishes at position y+n
-                sub_image = padded_channel[x: x + m, y: y + n]
+                sub_image = channel[x: x + m, y: y + n]
 
                 # if the sub_image has not the same size of the window, it means that the filter is already applied
                 # to the image
                 if sub_image.shape == window.shape:
                     # the new value will be the absolute value because some filters can return negative numbers
                     new_value = abs(np.sum(sub_image * window))
+
+                    output[x//stride, y//stride] = new_value
                     """
                     if the image is ixj, and x+offset[0] is larger than i or y+offset[1] is larger than j, it means
                     that the filter is already applied to all the image, because the offset will be after the end of the
@@ -291,7 +295,7 @@ def correlational(image: Image, size: Tuple[int, int], correlational_filter: nda
                     if x + offset[0] <= im.shape[0] - 1 and y + offset[1] <= im.shape[1] - 1:
                         result[x + offset[0], y + offset[1], i] = new_value
 
-    result = np.uint8(result)
+    result = np.uint8(output)
     return Image.fromarray(result)
 
 
@@ -320,6 +324,7 @@ def read_correlational_filters(file_name: str) -> None:
     offsets = [(int(offset.split(', ')[0]), int(offset.split(', ')[1]))
                for offset in offsets]
 
+    stride = int(correlational_filters[0])
     filters = [[] for _ in correlational_filters if ',' in _]
 
     j = 0
@@ -331,6 +336,7 @@ def read_correlational_filters(file_name: str) -> None:
 
     finished_arrays = [np.array(_) for _ in range(len(filters))]
     for j in range(len(filters)):
+        filters[j].pop(0)
         filters[j].pop(0)
         for i in range(len(filters[j])):
             filters[j][i] = filters[j][i].split(' ')
@@ -360,9 +366,10 @@ def read_correlational_filters(file_name: str) -> None:
         print("Time of box_11x11: ", end_time - begin_time)
     else:
         for i in range(len(finished_arrays)):
-            im = call_correlation_mxn(im, finished_arrays[i], offsets[i])
+            im = call_correlation_mxn(im, finished_arrays[i], offsets[i], stride)
 
     if file_name in ["tests/sobel_horizontal.txt", "tests/sobel_vertical.txt"]:
+        print("sobel_horizontal")
         im = histogram_expansion(im)
 
     im.show()
