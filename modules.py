@@ -324,7 +324,11 @@ def read_correlational_filters(file_name: str) -> None:
     offsets = [(int(offset.split(', ')[0]), int(offset.split(', ')[1]))
                for offset in offsets]
 
-    stride = int(correlational_filters[0])
+    strides = [int(correlational_filters[0])]
+    if len(offsets) > 1:
+        for i in range(len(correlational_filters)):
+            if correlational_filters[i] == '':
+                strides.append(correlational_filters[i+1])
     filters = [[] for _ in correlational_filters if ',' in _]
 
     j = 0
@@ -354,7 +358,7 @@ def read_correlational_filters(file_name: str) -> None:
     if file_name == "tests/box_11x1(box_1x11(image)).txt":
         begin_time = timeit.default_timer()
         for i in range(len(finished_arrays)):
-            im = call_correlation_mxn(im, finished_arrays[i], offsets[i])
+            im = call_correlation_mxn(im, finished_arrays[i], offsets[i], strides[i])
 
         end_time = timeit.default_timer()
         print("Time of box_11x1(box_1x11(image)): ", end_time - begin_time)
@@ -366,7 +370,7 @@ def read_correlational_filters(file_name: str) -> None:
         print("Time of box_11x11: ", end_time - begin_time)
     else:
         for i in range(len(finished_arrays)):
-            im = call_correlation_mxn(im, finished_arrays[i], offsets[i], stride)
+            im = call_correlation_mxn(im, finished_arrays[i], offsets[i], strides[0])
 
     if file_name in ["tests/sobel_horizontal.txt", "tests/sobel_vertical.txt"]:
         print("sobel_horizontal")
