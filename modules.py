@@ -138,11 +138,11 @@ def get_rgb_pixels_from_hsb(pixels: List[List[List[float]]]) -> ndarray:
 
 def hsb_to_rgb(pixels: List[List[List[float]]]) -> Image:
     """
-    Transforms an image (in this case, it is a list of values that characterize a pixel) in YIQ into RGB calling an
+    Transforms an image (in this case, it is a list of values that characterize a pixel) in HSV into RGB calling an
     auxiliary function to make the calculations. It rotates the pixels as well to adjust the image correctly after the
     conversion.
-    :param pixels: YIQ pixels list
-    :return: RGB image from the YIQ pixels
+    :param pixels: HSV pixels list
+    :return: RGB image from the HSV pixels
     """
     pixels = get_rgb_pixels_from_hsb(pixels)
     rotated_pixels = np.rot90(pixels, axes=(1, 0))
@@ -156,8 +156,14 @@ def change_hue_sat(image: Image, add_to_hue=0, add_to_sat=0) -> Image:
 
     for r in range(len(hsb_pixels[0])):
         for c in range(len(hsb_pixels[0][0])):
-            hsb_pixels[0][r][c] = add_to_hue + hsb_pixels[0][r][c]
-            hsb_pixels[1][r][c] = add_to_sat + hsb_pixels[1][r][c]
+            added_sat = add_to_sat + hsb_pixels[1][r][c]
+            if added_sat > 1:
+                added_sat = 1
+            elif added_sat < 0:
+                added_sat = 0
+
+            hsb_pixels[0][r][c] = (add_to_hue + hsb_pixels[0][r][c]) % 360
+            hsb_pixels[1][r][c] = added_sat
     return hsb_to_rgb(hsb_pixels)
 
 
@@ -232,7 +238,7 @@ def median_filter(image: Image, size: Tuple[int, int]) -> Image:
     return Image.fromarray(result)
 
 
-def call_correlation_mxn(image: Image, correlational_filter: ndarray, offset: Tuple[int, int], stride) -> Image:
+def call_correlation_mxn(image: Image, correlational_filter: ndarray, offset: Tuple[int, int], stride: int) -> Image:
     """
     This function checks if the size of the filter is valid and then calls the correlational filter
     :param stride: Regarding the step that the filter is going to take
@@ -264,18 +270,18 @@ def correlational(image: Image, size: Tuple[int, int], correlational_filter: nda
     m, n = size
     window = correlational_filter
 
-    output_height = (im.shape[0] - m) // stride + 1
-    output_width = (im.shape[1] - n) // stride + 1
+    output_height = (im.shape[0] - m) // (stride + 1)
+    output_width = (im.shape[1] - n) // (stride + 1)
 
     # final image will be the 'result', initializes output with array of zeros
-    result = deepcopy(im)
-    output = np.zeros((output_height, output_width))
+    #result = deepcopy(im)
+    output = np.zeros((output_height, output_width, 3))
     for i in range(im.shape[2]):
         # getting all the values of R, then G, then B
         channel = im[:, :, i]
 
-        for x in range(0, im.shape[0] - m + 1, stride):
-            for y in range(0, im.shape[1] - n + 1, stride):
+        for x in range(0, im.shape[0] - m + 1, stride if stride > 0 else 1):
+            for y in range(0, im.shape[1] - n + 1, stride if stride > 0 else 1):
                 # getting a sub_image that starts at position x and finishes at position x+m
                 # and starts at position y and finishes at position y+n
                 sub_image = channel[x: x + m, y: y + n]
@@ -286,14 +292,14 @@ def correlational(image: Image, size: Tuple[int, int], correlational_filter: nda
                     # the new value will be the absolute value because some filters can return negative numbers
                     new_value = abs(np.sum(sub_image * window))
 
-                    output[x//stride, y//stride] = new_value
+                    output[(x//(stride + 1)) - 1, (y//(stride + 1)) - 1, i] = new_value
                     """
                     if the image is ixj, and x+offset[0] is larger than i or y+offset[1] is larger than j, it means
                     that the filter is already applied to all the image, because the offset will be after the end of the
                     image
                     """
-                    if x + offset[0] <= im.shape[0] - 1 and y + offset[1] <= im.shape[1] - 1:
-                        result[x + offset[0], y + offset[1], i] = new_value
+                    #if x + offset[0] <= im.shape[0] - 1 and y + offset[1] <= im.shape[1] - 1:
+                    #    result[x + offset[0], y + offset[1], i] = new_value
 
     result = np.uint8(output)
     return Image.fromarray(result)
@@ -324,11 +330,11 @@ def read_correlational_filters(file_name: str) -> None:
     offsets = [(int(offset.split(', ')[0]), int(offset.split(', ')[1]))
                for offset in offsets]
 
-    strides = [int(correlational_filters[0])]
+    strides = [int(correlational_filters[0])-1]
     if len(offsets) > 1:
         for i in range(len(correlational_filters)):
             if correlational_filters[i] == '':
-                strides.append(correlational_filters[i+1])
+                strides.append(int(correlational_filters[i+1])-1)
     filters = [[] for _ in correlational_filters if ',' in _]
 
     j = 0
@@ -346,7 +352,7 @@ def read_correlational_filters(file_name: str) -> None:
             filters[j][i] = filters[j][i].split(' ')
             for h in range(len(filters[j][i])):
                 treated_float = filters[j][i][h] if '/' in filters[j][i][h] else None
-                if treated_float:
+                if treated_float is not None:
                     split_float = filters[j][i][h].split('/')
                     split_float = int(split_float[0]) / int(split_float[1])
                     filters[j][i][h] = split_float
@@ -355,19 +361,19 @@ def read_correlational_filters(file_name: str) -> None:
         finished_arrays[j] = np.array(np.array(filters[j]))
 
     im = Image.open("tests/image.png")
-    if file_name == "tests/box_11x1(box_1x11(image)).txt":
+    if file_name == "tests/box_15x1(box_1x15(image)).txt":
         begin_time = timeit.default_timer()
         for i in range(len(finished_arrays)):
             im = call_correlation_mxn(im, finished_arrays[i], offsets[i], strides[i])
 
         end_time = timeit.default_timer()
-        print("Time of box_11x1(box_1x11(image)): ", end_time - begin_time)
+        print("Time of box_15x1(box_1x15(image)): ", end_time - begin_time)
 
-    elif file_name == "tests/box_11x11.txt":
+    elif file_name == "tests/box_15x15.txt":
         begin_time = timeit.default_timer()
-        im = call_correlation_mxn(im, finished_arrays[0], offsets[0])
+        im = call_correlation_mxn(im, finished_arrays[0], offsets[0], strides[0])
         end_time = timeit.default_timer()
-        print("Time of box_11x11: ", end_time - begin_time)
+        print("Time of box_15x15: ", end_time - begin_time)
     else:
         for i in range(len(finished_arrays)):
             im = call_correlation_mxn(im, finished_arrays[i], offsets[i], strides[0])
@@ -377,3 +383,4 @@ def read_correlational_filters(file_name: str) -> None:
         im = histogram_expansion(im)
 
     im.show()
+    im.save(file_name + ".png")
