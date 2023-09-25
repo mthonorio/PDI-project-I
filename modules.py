@@ -274,7 +274,7 @@ def correlational(image: Image, size: Tuple[int, int], correlational_filter: nda
     output_width = (im.shape[1] - n) // (stride + 1)
 
     # final image will be the 'result', initializes output with array of zeros
-    #result = deepcopy(im)
+    # result = deepcopy(im)
     output = np.zeros((output_height, output_width, 3))
     for i in range(im.shape[2]):
         # getting all the values of R, then G, then B
@@ -293,13 +293,6 @@ def correlational(image: Image, size: Tuple[int, int], correlational_filter: nda
                     new_value = abs(np.sum(sub_image * window))
 
                     output[(x//(stride + 1)) - 1, (y//(stride + 1)) - 1, i] = new_value
-                    """
-                    if the image is ixj, and x+offset[0] is larger than i or y+offset[1] is larger than j, it means
-                    that the filter is already applied to all the image, because the offset will be after the end of the
-                    image
-                    """
-                    #if x + offset[0] <= im.shape[0] - 1 and y + offset[1] <= im.shape[1] - 1:
-                    #    result[x + offset[0], y + offset[1], i] = new_value
 
     result = np.uint8(output)
     return Image.fromarray(result)
